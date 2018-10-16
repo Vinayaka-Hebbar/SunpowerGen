@@ -85,6 +85,7 @@ public class SlideMenuView extends DragView implements LayoutListener {
         post(new Runnable() {
             @Override
             public void run() {
+                //I Don't Know what is this
                 gestureListener.updateSize();
                 Rect rect = gestureListener.getHidePosition();
                 layout(rect.left, rect.top, rect.right, rect.bottom);
