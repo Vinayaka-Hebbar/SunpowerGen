@@ -15,6 +15,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import com.elpisitsolutions.slidemenu.ShadowDrawable;
+import com.elpisitsolutions.slidemenu.SlideMenu;
 import com.elpisitsolutions.slidemenu.SlideMenuView;
 
 public class MainActivity extends AppCompatActivity {
@@ -41,10 +43,9 @@ public class MainActivity extends AppCompatActivity {
         }
         drawerLayout = findViewById(R.id.drawer_main);
         FrameLayout layout = findViewById(R.id.frame);
-        ViewGroup.LayoutParams layoutParams = layout.getLayoutParams();
-        slideMenuView = SlideMenuView.get(this, R.layout.slide_menu,R.id.layout_root);
-
-        slideMenuView.init(R.id.layout_root,SlideMenuView.VERTICAL);
+        slideMenuView = SlideMenu.get(this, R.layout.slide_menu, R.id.drawer_main).getSlideMenuView();
+        slideMenuView.setBackground(new ShadowDrawable().createLayerDrawable());
+        slideMenuView.init(SlideMenuView.VERTICAL);
     }
 
     @Override

@@ -2,15 +2,18 @@ package com.elpisitsolutions.slidemenu;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.support.annotation.IntDef;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-public class DragView extends FrameLayout {
+public abstract class DragView extends FrameLayout implements View.OnTouchListener {
 
     public int getOrientation() {
         return orientation;
@@ -36,6 +39,21 @@ public class DragView extends FrameLayout {
         this.animationDuration = animationDuration;
     }
 
+    public int getOverlayAlpha() {
+        return overlayAlpha;
+    }
+
+    public void setOverlayAlpha(int overlayAlpha) {
+        this.overlayAlpha = overlayAlpha;
+    }
+
+    public View getOverlayView() {
+        return overlayView;
+    }
+
+    @Override
+    public abstract boolean onTouch(View view, MotionEvent motionEvent);
+
     @IntDef({LEFT_TO_RIGHT, RIGHT_TO_LEFT, TOP_TO_BOTTOM, BOTTOM_TO_TOP})
     @Retention(RetentionPolicy.SOURCE)
     public @interface DragOrientation {
@@ -52,12 +70,16 @@ public class DragView extends FrameLayout {
 
     public DragView(Context context) {
         super(context);
+        overlayView = new View(context);
+        overlayView.setOnTouchListener(this);
     }
 
 
     private double draggerButtonHeight, draggerButtonWidth;
     private boolean isFullScreen;
-    private int animationDuration = 1000;
+    private int animationDuration;
+    private int overlayAlpha;
+    private final View overlayView;
 
     public DragView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
@@ -67,9 +89,13 @@ public class DragView extends FrameLayout {
             draggerButtonWidth = typedArray.getDimension(R.styleable.DragView_draggerButtonWidth, 0.0f);
             isFullScreen = typedArray.getBoolean(R.styleable.DragView_isFullScreen, false);
             animationDuration = typedArray.getInt(R.styleable.DragView_animationDuration, 1000);
+            overlayAlpha = typedArray.getInt(R.styleable.DragView_overlayAlpha, 10);
         } finally {
             typedArray.recycle();
         }
+        overlayView = new View(context);
+        overlayView.setBackgroundColor(Color.parseColor("#C1EFECED"));
+        overlayView.setOnTouchListener(this);
     }
 
     public double getDraggerButtonWidth() {

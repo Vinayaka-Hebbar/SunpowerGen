@@ -57,14 +57,15 @@ public class DragGestureFactory {
 
         public void updateSize() {
             topMax = 0;
-            topMin = -(getView().getHeight() - getView().getDraggerButtonHeight());
-            bottomMax = getView().getHeight();
+            ViewGroup.LayoutParams layoutParams = getView().getLayoutParams();
+            topMin = -(layoutParams.height - getView().getDraggerButtonHeight());
+            bottomMax = layoutParams.height;
             bottomMin = getView().getDraggerButtonHeight();
             if (getDragOrientation() == DragView.BOTTOM_TO_TOP) {
                 isTopToBottom = false;
                 topMax = screenHeight - getView().getDraggerButtonHeight();
-                topMin = screenHeight - getView().getHeight();
-                bottomMax = screenHeight + getView().getHeight() - getView().getDraggerButtonHeight();
+                topMin = screenHeight - layoutParams.height;
+                bottomMax = screenHeight + layoutParams.height - getView().getDraggerButtonHeight();
                 bottomMin = screenHeight;
             }
             if (getView().isFullScreen()) {
@@ -85,7 +86,7 @@ public class DragGestureFactory {
         @Override
         public void DragMove(double x, double y) {
             double delta = y - oldY;
-            if (delta > -2 && delta < 2) return;
+            if (delta > -4 && delta < 4) return;
             if (delta > 0)
                 willShown = isTopToBottom;
             if (delta < 0)
@@ -115,6 +116,8 @@ public class DragGestureFactory {
 
         @Override
         public Rect getHidePosition() {
+            top = isTopToBottom ? topMin : topMax;
+            bottom = isTopToBottom ? bottomMin : bottomMax;
             return new Rect((int) left,
                     isTopToBottom ? (int) topMin : (int) topMax,
                     (int) right,
@@ -123,6 +126,8 @@ public class DragGestureFactory {
 
         @Override
         public Rect getShowPosition() {
+            top = isTopToBottom ? topMax : topMin;
+            bottom = isTopToBottom ? bottomMax : bottomMin;
             return new Rect((int) left,
                     isTopToBottom ? (int) topMax : (int) topMin,
                     (int) right,

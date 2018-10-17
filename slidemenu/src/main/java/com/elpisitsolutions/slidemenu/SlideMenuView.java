@@ -1,11 +1,11 @@
 package com.elpisitsolutions.slidemenu;
 
-import android.app.Activity;
+import android.animation.Animator;
 import android.content.Context;
 import android.graphics.Rect;
+import android.graphics.drawable.ColorDrawable;
 import android.support.annotation.IntDef;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,12 +14,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 public class SlideMenuView extends DragView implements LayoutListener {
-
-    private final int DOWN = 0;
-    private final int UP = 1;
-    private final int MOVE = 2;
-    private final int MASK = 255;
-    private final Context context;
+    private ColorDrawable layerBackground;
+    private int restoreAlpha;
 
     public void setOrientationMode(@OrientationMode int orientationMode) {
         this.orientationMode = orientationMode;
@@ -53,9 +49,24 @@ public class SlideMenuView extends DragView implements LayoutListener {
         this.parent = parent;
     }
 
+    public void onParentSizeChanged() {
+        getOverlayView().measure(View.MeasureSpec.makeMeasureSpec(parent.getWidth(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(parent.getHeight(), View.MeasureSpec.EXACTLY));
+        getOverlayView().layout(0, 0, parent.getWidth(), parent.getHeight());
+        if (gestureListener != null) {
+            gestureListener.updateSize();
+            Rect rect = gestureListener.getHidePosition();
+            layout(rect.left, rect.top, rect.right, rect.bottom);
+        }
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+    }
+
     @IntDef({HORIZONTAL, VERTICAL})
     @Retention(RetentionPolicy.SOURCE)
-    public @interface OrientationMode {
+    @interface OrientationMode {
     }
 
     public static final int HORIZONTAL = 0;
@@ -65,9 +76,14 @@ public class SlideMenuView extends DragView implements LayoutListener {
     int orientationMode;
     private DragGestureListener gestureListener;
 
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        hide();
+        return false;
+    }
+
     public SlideMenuView(Context context) {
         super(context);
-        this.context = context;
     }
 
     public SlideMenuView(Context context, AttributeSet attrs) {
@@ -76,34 +92,24 @@ public class SlideMenuView extends DragView implements LayoutListener {
 
     public SlideMenuView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        this.context = context;
     }
 
     public void init(final ViewGroup parent, @OrientationMode int orientationMode) {
         this.parent = parent;
         setOrientationMode(orientationMode);
-        post(new Runnable() {
-            @Override
-            public void run() {
-                //I Don't Know what is this
-                gestureListener.updateSize();
-                Rect rect = gestureListener.getHidePosition();
-                layout(rect.left, rect.top, rect.right, rect.bottom);
-            }
-        });
-        parent.addView(this);
-        parent.bringChildToFront(SlideMenuView.this);
+        setVisibility(INVISIBLE);
     }
 
-    public void init(int parentId, @OrientationMode int orientationMode) {
-        ViewGroup parent = ((Activity) context).findViewById(parentId);
+    public void init(@OrientationMode int orientationMode) {
         init(parent, orientationMode);
     }
 
     public void show() {
+        int height = getHeight();
         Rect rect = gestureListener.getShowPosition();
         animate().x(rect.left)
                 .y(rect.top)
+                .setListener(new ViewAnimatorListener(this, true))
                 .setDuration(getAnimationDuration())
                 .start();
     }
@@ -116,6 +122,7 @@ public class SlideMenuView extends DragView implements LayoutListener {
         Rect rect = gestureListener.getHidePosition();
         animate().x(rect.left)
                 .y(rect.top)
+                .setListener(new ViewAnimatorListener(this, false))
                 .setDuration(getAnimationDuration())
                 .start();
     }
@@ -124,38 +131,66 @@ public class SlideMenuView extends DragView implements LayoutListener {
         listener.onHide(gestureListener);
     }
 
-    public static SlideMenuView get(Context context, int res, int parentId) {
-        ViewGroup parent = ((Activity) context).findViewById(parentId);
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        if (inflater != null) {
-            View view = inflater.inflate(res, parent, false);
-            if (view instanceof SlideMenuView) {
-                return (SlideMenuView) view;
-            }
-        }
-        return null;
-    }
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        int action = event.getAction() & MASK;
-        if (action == DOWN) {
+        int action = event.getAction() & 255;
+        if (action == 0) {
             gestureListener.DragBegin(event.getRawX(), event.getRawY());
-        } else if (action == MOVE) {
+        } else if (action == 2) {
             gestureListener.DragMove(event.getRawX(), event.getRawY());
-        } else if (action == UP) {
+        } else if (action == 1) {
             gestureListener.DragEnd();
         }
         return true;
     }
 
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        if (gestureListener != null) {
-            gestureListener.updateSize();
-            Rect rect = gestureListener.getHidePosition();
-            layout(rect.left, rect.top, rect.right, rect.bottom);
+    class ViewAnimatorListener implements Animator.AnimatorListener {
+        private final SlideMenuView view;
+        private final boolean isVisible;
+
+        ViewAnimatorListener(SlideMenuView view, boolean isVisible) {
+            this.view = view;
+            this.isVisible = isVisible;
+            if (isVisible) {
+                view.initOverlay();
+            }
         }
+
+        @Override
+        public void onAnimationStart(Animator animator) {
+            view.setVisibility(VISIBLE);
+        }
+
+        @Override
+        public void onAnimationEnd(Animator animator) {
+            if (!isVisible) {
+                view.clearOverlay();
+                view.setVisibility(INVISIBLE);
+            }
+        }
+
+        @Override
+        public void onAnimationCancel(Animator animator) {
+            view.setVisibility(INVISIBLE);
+        }
+
+        @Override
+        public void onAnimationRepeat(Animator animator) {
+
+        }
+    }
+
+    private void clearOverlay() {
+        parent.removeView(getOverlayView());
+    }
+
+    private void initOverlay() {
+        if (getOverlayView().getParent() == null)
+            parent.addView(getOverlayView());
+        bringToFront();
+    }
+
+    private void restoreOverlayBackground() {
+        layerBackground.setAlpha(restoreAlpha);
     }
 }
